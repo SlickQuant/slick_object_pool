@@ -73,7 +73,7 @@ Comprehensive documentation covering:
    - Pool size query
    - Power-of-2 note
 
-2. **T* allocate_object()**
+2. **T* allocate()**
    - Comprehensive documentation
    - Behavior under different conditions
    - Performance characteristics
@@ -81,7 +81,7 @@ Comprehensive documentation covering:
    - Usage examples
    - Important warnings
 
-3. **void free_object(T* obj)**
+3. **void free(T* obj)**
    - Dual behavior (pool vs heap)
    - Automatic detection mechanism
    - Performance notes
@@ -219,7 +219,7 @@ All member variables are documented with inline comments (`///`):
 
 Focus on:
 - Constructor documentation
-- `allocate_object()` and `free_object()` methods
+- `allocate()` and `free()` methods
 - Thread safety guarantees
 - Code examples
 - Warnings and notes
@@ -270,15 +270,15 @@ Full documentation including:
  * @par Example
  * @code
  * slick::ObjectPool<MyStruct> pool(1024);
- * MyStruct* obj = pool.allocate_object();
+ * MyStruct* obj = pool.allocate();
  * obj->field = value;
- * pool.free_object(obj);
+ * pool.free(obj);
  * @endcode
  *
- * @note Must be paired with free_object() to avoid memory leaks
+ * @note Must be paired with free() to avoid memory leaks
  * @note Returned object is NOT automatically initialized
  */
-T* allocate_object();
+T* allocate();
 ```
 
 ### Key Elements

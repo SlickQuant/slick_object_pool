@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2025-01-23
+## [0.1.1] - 2025-11-12
+
+### Changed function signitures
+- Changed allocate_object() to allocate()
+- Changed free_object() to free()
+
+## [0.1.0] - 2025-10-23
 
 ### Added
 - Initial release of slick_object_pool
@@ -27,8 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 - `ObjectPool<T>` class template for type-safe object pooling
-- `allocate_object()` method for O(1) object allocation
-- `free_object()` method for O(1) object deallocation
+- `allocate()` method for O(1) object allocation
+- `free()` method for O(1) object deallocation
 - `size()` method to query pool capacity
 - Namespace: `slick::ObjectPool<T>`
 - Include path: `<slick/object_pool.h>`

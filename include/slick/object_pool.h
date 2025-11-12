@@ -43,16 +43,16 @@ namespace slick {
  * @endcode
  *
  * @section thread_safety Thread Safety
- * - Multiple threads can call allocate_object() concurrently (lock-free)
- * - Multiple threads can call free_object() concurrently (lock-free)
+ * - Multiple threads can call allocate() concurrently (lock-free)
+ * - Multiple threads can call free() concurrently (lock-free)
  * - reset() is NOT thread-safe
  *
  * @section example Example Usage
  * @code
  * slick::ObjectPool<MyStruct> pool(1024);
- * auto* obj = pool.allocate_object();
+ * auto* obj = pool.allocate();
  * obj->field = value;
- * pool.free_object(obj);
+ * pool.free(obj);
  * @endcode
  *
  * @tparam T Object type to pool
@@ -193,11 +193,11 @@ public:
      *
      * @par Example
      * @code
-     * auto* obj = pool.allocate_object();
+     * auto* obj = pool.allocate();
      * obj->value = 42;
      * @endcode
      */
-    T* allocate_object() {
+    T* allocate() {
         auto [obj, size] = consume();
         if (!obj) {
             // Pool exhausted - allocate from heap
@@ -232,7 +232,7 @@ public:
      * @warning Do not free the same object twice
      * @warning Do not access object after calling free_object()
      */
-    void free_object(T* obj) {
+    void free(T* obj) {
         auto o = reinterpret_cast<intptr_t>(obj);
         if (o >= lower_bound_ && o <= upper_bound_) {
             // Object belongs to pool - return it

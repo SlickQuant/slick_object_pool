@@ -94,12 +94,12 @@ int main() {
     slick::ObjectPool<MyObject> pool(1024);
 
     // Allocate object from pool
-    MyObject* obj = pool.allocate_object();
+    MyObject* obj = pool.allocate();
     obj->id = 42;
     obj->value = 3.14;
 
     // Return object to pool
-    pool.free_object(obj);
+    pool.free(obj);
 
     return 0;
 }
@@ -170,7 +170,7 @@ int main() {
     slick::ObjectPool<Message> pool(512);
 
     // Allocate from pool
-    Message* msg = pool.allocate_object();
+    Message* msg = pool.allocate();
     msg->id = 1;
     std::strcpy(msg->data, "Hello, World!");
 
@@ -178,7 +178,7 @@ int main() {
     std::cout << "Message: " << msg->data << std::endl;
 
     // Return to pool when done
-    pool.free_object(msg);
+    pool.free(msg);
 
     return 0;
 }
@@ -199,14 +199,14 @@ struct WorkItem {
 void worker_thread(slick::ObjectPool<WorkItem>& pool, int thread_id) {
     for (int i = 0; i < 10000; ++i) {
         // Allocate from pool (lock-free)
-        WorkItem* item = pool.allocate_object();
+        WorkItem* item = pool.allocate();
 
         // Do work
         item->task_id = thread_id * 10000 + i;
         process_work(*item);
 
         // Return to pool (lock-free)
-        pool.free_object(item);
+        pool.free(item);
     }
 }
 
@@ -235,8 +235,8 @@ int main() {
 
 The pool uses atomic compare-and-swap (CAS) operations to coordinate multiple producers and consumers without locks:
 
-- **Producers** (threads calling `allocate_object()`) atomically reserve slots from the pool
-- **Consumers** (threads calling `free_object()`) atomically return objects to the pool
+- **Producers** (threads calling `allocate()`) atomically reserve slots from the pool
+- **Consumers** (threads calling `free()`) atomically return objects to the pool
 - **Ring buffer** wrapping is handled atomically without blocking
 - **No spinlocks, no mutexes** - truly wait-free for successful operations
 
@@ -315,13 +315,13 @@ ObjectPool(uint32_t size);
 
 ```cpp
 // Allocate an object from the pool
-T* allocate_object();
+T* allocate();
 ```
 Returns a pointer to an object from the pool. If pool is exhausted, allocates a new object from heap.
 
 ```cpp
 // Return an object to the pool
-void free_object(T* obj);
+void free(T* obj);
 ```
 Returns an object to the pool if it belongs to the pool, otherwise deletes it.
 
@@ -454,8 +454,8 @@ sudo cmake --install .
 
 ### Guarantees
 
-- ✅ **Multiple producers** can call `allocate_object()` concurrently
-- ✅ **Multiple consumers** can call `free_object()` concurrently
+- ✅ **Multiple producers** can call `allocate()` concurrently
+- ✅ **Multiple consumers** can call `free()` concurrently
 - ✅ **Mixed operations** (allocate + free) are safe
 - ❌ **reset()** is NOT thread-safe (use when no other threads are active)
 
@@ -488,11 +488,11 @@ slick::ObjectPool<T> pool(1000);
 ### Pool Exhaustion Handling
 
 ```cpp
-// When pool is exhausted, allocate_object() allocates from heap
-T* obj = pool.allocate_object();  // May return heap-allocated object
+// When pool is exhausted, allocate() allocates from heap
+T* obj = pool.allocate();  // May return heap-allocated object
 
 // free_object() detects and handles both cases
-pool.free_object(obj);  // Works for pool or heap objects
+pool.free(obj);  // Works for pool or heap objects
 ```
 
 ### Type Design
@@ -536,7 +536,7 @@ struct FixedType {
 ## FAQ
 
 **Q: What happens when the pool is exhausted?**
-A: `allocate_object()` automatically allocates from heap. `free_object()` detects and deletes heap-allocated objects.
+A: `allocate()` automatically allocates from heap. `free()` detects and deletes heap-allocated objects.
 
 **Q: Can I use std::string or std::vector in pooled objects?**
 A: Yes! The pool works with any default constructible type, including std::string, std::vector, and other standard containers.

@@ -60,7 +60,7 @@ TEST_F(ObjectPoolTest, ConstructorLocalMemory) {
 TEST_F(ObjectPoolTest, AllocateAndFreeBasic) {
     slick::ObjectPool<SimpleStruct> pool(256);
 
-    SimpleStruct* obj = pool.allocate_object();
+    SimpleStruct* obj = pool.allocate();
     ASSERT_NE(obj, nullptr);
 
     obj->id = 42;
@@ -69,7 +69,7 @@ TEST_F(ObjectPoolTest, AllocateAndFreeBasic) {
     EXPECT_EQ(obj->id, 42);
     EXPECT_DOUBLE_EQ(obj->value, 3.14);
 
-    pool.free_object(obj);
+    pool.free(obj);
 }
 
 TEST_F(ObjectPoolTest, AllocateMultipleObjects) {
@@ -80,7 +80,7 @@ TEST_F(ObjectPoolTest, AllocateMultipleObjects) {
 
     // Allocate half the pool
     for (size_t i = 0; i < POOL_SIZE / 2; ++i) {
-        SimpleStruct* obj = pool.allocate_object();
+        SimpleStruct* obj = pool.allocate();
         ASSERT_NE(obj, nullptr);
         obj->id = static_cast<int32_t>(i);
         objects.push_back(obj);
@@ -93,7 +93,7 @@ TEST_F(ObjectPoolTest, AllocateMultipleObjects) {
 
     // Free all
     for (auto* obj : objects) {
-        pool.free_object(obj);
+        pool.free(obj);
     }
 }
 
@@ -105,7 +105,7 @@ TEST_F(ObjectPoolTest, PoolExhaustion) {
 
     // Exhaust the pool + allocate from heap
     for (size_t i = 0; i < POOL_SIZE + 10; ++i) {
-        SimpleStruct* obj = pool.allocate_object();
+        SimpleStruct* obj = pool.allocate();
         ASSERT_NE(obj, nullptr);
         obj->id = static_cast<int32_t>(i);
         objects.push_back(obj);
@@ -118,7 +118,7 @@ TEST_F(ObjectPoolTest, PoolExhaustion) {
 
     // Free all (should handle both pool and heap objects)
     for (auto* obj : objects) {
-        pool.free_object(obj);
+        pool.free(obj);
     }
 }
 
@@ -130,7 +130,7 @@ TEST_F(ObjectPoolTest, ReuseObjects) {
         std::vector<SimpleStruct*> objects;
 
         for (int i = 0; i < 50; ++i) {
-            SimpleStruct* obj = pool.allocate_object();
+            SimpleStruct* obj = pool.allocate();
             ASSERT_NE(obj, nullptr);
             obj->id = cycle * 100 + i;
             objects.push_back(obj);
@@ -143,7 +143,7 @@ TEST_F(ObjectPoolTest, ReuseObjects) {
 
         // Free all
         for (auto* obj : objects) {
-            pool.free_object(obj);
+            pool.free(obj);
         }
     }
 }
@@ -151,7 +151,7 @@ TEST_F(ObjectPoolTest, ReuseObjects) {
 TEST_F(ObjectPoolTest, LargeObjectHandling) {
     slick::ObjectPool<LargeStruct> pool(128);
 
-    LargeStruct* obj = pool.allocate_object();
+    LargeStruct* obj = pool.allocate();
     ASSERT_NE(obj, nullptr);
 
     obj->timestamp = 1234567890;
@@ -165,7 +165,7 @@ TEST_F(ObjectPoolTest, LargeObjectHandling) {
     EXPECT_DOUBLE_EQ(obj->values[127], 127 * 1.5);
     EXPECT_STREQ(obj->data, "Test large struct");
 
-    pool.free_object(obj);
+    pool.free(obj);
 }
 
 // ============================================================================
@@ -182,7 +182,7 @@ TEST_F(ObjectPoolTest, MultiThreadedAllocateFree) {
 
     auto worker = [&](int thread_id) {
         for (int i = 0; i < OPS_PER_THREAD; ++i) {
-            SimpleStruct* obj = pool.allocate_object();
+            SimpleStruct* obj = pool.allocate();
             if (!obj) {
                 error_count++;
                 continue;
@@ -196,7 +196,7 @@ TEST_F(ObjectPoolTest, MultiThreadedAllocateFree) {
                 error_count++;
             }
 
-            pool.free_object(obj);
+            pool.free(obj);
         }
     };
 
@@ -232,14 +232,14 @@ TEST_F(ObjectPoolTest, ConcurrentStressTest) {
             // Randomly allocate or free
             if (dist(rng) > 5 || local_objects.empty()) {
                 // Allocate
-                SimpleStruct* obj = pool.allocate_object();
+                SimpleStruct* obj = pool.allocate();
                 obj->id = thread_id;
                 local_objects.push_back(obj);
                 total_allocations++;
             } else {
                 // Free
                 size_t idx = rng() % local_objects.size();
-                pool.free_object(local_objects[idx]);
+                pool.free(local_objects[idx]);
                 local_objects.erase(local_objects.begin() + idx);
                 total_deallocations++;
             }
@@ -247,7 +247,7 @@ TEST_F(ObjectPoolTest, ConcurrentStressTest) {
 
         // Clean up remaining
         for (auto* obj : local_objects) {
-            pool.free_object(obj);
+            pool.free(obj);
             total_deallocations++;
         }
     };
@@ -277,9 +277,9 @@ TEST_F(ObjectPoolTest, DISABLED_BenchmarkSingleThreaded) {
     auto start = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < ITERATIONS; ++i) {
-        SimpleStruct* obj = pool.allocate_object();
+        SimpleStruct* obj = pool.allocate();
         obj->id = i;
-        pool.free_object(obj);
+        pool.free(obj);
     }
 
     auto end = std::chrono::high_resolution_clock::now();
@@ -302,9 +302,9 @@ TEST_F(ObjectPoolTest, DISABLED_BenchmarkMultiThreaded) {
 
     auto worker = [&](int thread_id) {
         for (int i = 0; i < OPS_PER_THREAD; ++i) {
-            SimpleStruct* obj = pool.allocate_object();
+            SimpleStruct* obj = pool.allocate();
             obj->id = thread_id * OPS_PER_THREAD + i;
-            pool.free_object(obj);
+            pool.free(obj);
         }
     };
 
@@ -341,7 +341,7 @@ TEST_F(ObjectPoolTest, NullPointerHandling) {
     external->id = 999;
 
     // Free object not from pool (should delete it)
-    pool.free_object(external);
+    pool.free(external);
 
     // Don't access external after this point - it's been deleted
 }
@@ -352,7 +352,7 @@ TEST_F(ObjectPoolTest, AlignmentTest) {
     std::vector<AlignedStruct*> objects;
 
     for (int i = 0; i < 50; ++i) {
-        AlignedStruct* obj = pool.allocate_object();
+        AlignedStruct* obj = pool.allocate();
         ASSERT_NE(obj, nullptr);
 
         // Check alignment
@@ -364,7 +364,7 @@ TEST_F(ObjectPoolTest, AlignmentTest) {
     }
 
     for (auto* obj : objects) {
-        pool.free_object(obj);
+        pool.free(obj);
     }
 }
 
@@ -376,9 +376,9 @@ TEST_F(ObjectPoolTest, PowerOfTwoSizes) {
         slick::ObjectPool<SimpleStruct> pool(size);
         EXPECT_EQ(pool.size(), size);
 
-        SimpleStruct* obj = pool.allocate_object();
+        SimpleStruct* obj = pool.allocate();
         ASSERT_NE(obj, nullptr);
-        pool.free_object(obj);
+        pool.free(obj);
     }
 }
 
@@ -391,14 +391,14 @@ TEST_F(ObjectPoolTest, WrapAroundTest) {
         std::vector<SimpleStruct*> objects;
 
         for (size_t i = 0; i < POOL_SIZE; ++i) {
-            SimpleStruct* obj = pool.allocate_object();
+            SimpleStruct* obj = pool.allocate();
             ASSERT_NE(obj, nullptr);
             obj->id = static_cast<int32_t>(cycle * POOL_SIZE + i);
             objects.push_back(obj);
         }
 
         for (auto* obj : objects) {
-            pool.free_object(obj);
+            pool.free(obj);
         }
     }
 }
@@ -415,7 +415,7 @@ TEST_F(ObjectPoolTest, DataIntegrity) {
 
     // Allocate and fill
     for (int i = 0; i < 100; ++i) {
-        SimpleStruct* obj = pool.allocate_object();
+        SimpleStruct* obj = pool.allocate();
         obj->id = i;
         obj->value = i * 1.5;
         objects.push_back(obj);
@@ -429,7 +429,7 @@ TEST_F(ObjectPoolTest, DataIntegrity) {
 
     // Free half
     for (size_t i = 0; i < objects.size() / 2; ++i) {
-        pool.free_object(objects[i]);
+        pool.free(objects[i]);
     }
 
     // Verify remaining half
@@ -440,7 +440,7 @@ TEST_F(ObjectPoolTest, DataIntegrity) {
 
     // Free remaining
     for (size_t i = objects.size() / 2; i < objects.size(); ++i) {
-        pool.free_object(objects[i]);
+        pool.free(objects[i]);
     }
 }
 
@@ -453,7 +453,7 @@ TEST_F(ObjectPoolTest, NoObjectLeakage) {
     // Allocate all
     std::vector<SimpleStruct*> objects;
     for (size_t i = 0; i < POOL_SIZE; ++i) {
-        SimpleStruct* obj = pool.allocate_object();
+        SimpleStruct* obj = pool.allocate();
         ASSERT_NE(obj, nullptr);
 
         // Check for duplicate addresses (would indicate aliasing)
@@ -466,7 +466,7 @@ TEST_F(ObjectPoolTest, NoObjectLeakage) {
 
     // Free all
     for (auto* obj : objects) {
-        pool.free_object(obj);
+        pool.free(obj);
     }
 
     // Allocate again - should reuse same addresses
@@ -474,7 +474,7 @@ TEST_F(ObjectPoolTest, NoObjectLeakage) {
     objects.clear();
 
     for (size_t i = 0; i < POOL_SIZE; ++i) {
-        SimpleStruct* obj = pool.allocate_object();
+        SimpleStruct* obj = pool.allocate();
         ASSERT_NE(obj, nullptr);
 
         // Should be from the original set
@@ -487,6 +487,6 @@ TEST_F(ObjectPoolTest, NoObjectLeakage) {
 
     // Clean up
     for (auto* obj : objects) {
-        pool.free_object(obj);
+        pool.free(obj);
     }
 }
